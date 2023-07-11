@@ -6,11 +6,9 @@ import lombok.extern.java.Log;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import javax.servlet.http.*;
 import java.io.IOException;
+import java.util.UUID;
 
 
 @WebServlet("/login")
@@ -29,8 +27,31 @@ public class LoginController extends HttpServlet {
         String mid = req.getParameter("mid");
         String mpw = req.getParameter("mpw");
 
+        //auto 라는 이름으로 체크박스에서 전송되는값이 on인지 확인 (p.205)
+        String auto = req.getParameter("auto");
+
+        boolean rememberMe = auto != null && auto.equals("on");
+
+        //
+
         try {
             MemberDTO memberDTO = MemberService.INSTANCE.login(mid, mpw);
+
+            if (rememberMe) {
+                String uuid = UUID.randomUUID().toString();
+
+                MemberService.INSTANCE.updateUuid(mid, uuid);
+                memberDTO.setUuid(uuid);
+
+                Cookie rememberCookie =
+                        new Cookie("remember-me", uuid);
+                rememberCookie.setMaxAge(60*60*24*7);  //유효기간 1주일로 설정
+                rememberCookie.setPath("/");
+
+                resp.addCookie(rememberCookie);
+
+            }
+
             HttpSession session = req.getSession();
             session.setAttribute("loginInfo", memberDTO);
             resp.sendRedirect("/todo/list");
